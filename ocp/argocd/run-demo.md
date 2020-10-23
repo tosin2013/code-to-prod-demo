@@ -13,11 +13,15 @@
 ## Configuring the Argo CD Apps
 
 1. Add the Git repository for our application to Argo CD
+    > **NOTE**: Set your github username
+    ~~~sh
+    export GITHUB_USERNAME=changeme
+    ~~~
 
     > **NOTE**: Use your fork on the command below
 
     ~~~sh
-    argocd repo add https://github.com/mvazquezc/reverse-words-cicd.git --name reversewords-cicd
+    argocd repo add https://github.com/${GITHUB_USERNAME}/reverse-words-cicd.git --name reversewords-cicd
     ~~~
 2. Edit the ingresses for our applications before creating them in Argo CD
 
@@ -42,12 +46,15 @@
     git push origin prod
     ~~~
 3. Define Development application
-
+    > **NOTE**: Set your github username
+    ~~~sh
+    export GITHUB_USERNAME=changeme
+    ~~~
     > **NOTE**: Use your fork on the command below
-
+   
     ~~~sh
     argocd app create --project default --name reverse-words-stage \
-    --repo https://github.com/mvazquezc/reverse-words-cicd.git \
+    --repo https://github.com/${GITHUB_USERNAME}/reverse-words-cicd.git \
     --path . \
     --dest-server https://kubernetes.default.svc \
     --dest-namespace reverse-words-stage --revision stage \
@@ -59,7 +66,7 @@
 
     ~~~sh
     argocd app create --project default --name reverse-words-production \
-    --repo https://github.com/mvazquezc/reverse-words-cicd.git \
+    --repo https://github.com/${GITHUB_USERNAME}/reverse-words-cicd.git \
     --path . \
     --dest-server https://kubernetes.default.svc \
     --dest-namespace reverse-words-production --revision prod \
