@@ -120,7 +120,7 @@ We are going to use WebHooks in order to run Pipelines automatically when new co
         
         ~~~sh
         sudo curl -L https://github.com/tektoncd/cli/releases/download/v0.10.0/tkn_0.10.0_Linux_x86_64.tar.gz | tar xz tkn 
-        chown root: tkn && mv tkn /usr/bin/
+        sudo chown root: tkn && sudo mv tkn /usr/bin/
         ~~~
     2. We need to commit to the main branch, let's update the release number
      
