@@ -2,6 +2,7 @@
 
 if [[ ${DEBUG-} =~ ^1|yes|true$ ]]; then
     set -o xtrace
+    set -o errexit
 fi
 
 echo -ne "Enter your quay.io username: "
@@ -49,16 +50,17 @@ oc create namespace reversewords-ci
 sed -i "s/<username>/$QUAY_USER/" quay-credentials.yaml
 sed -i "s/<password>/$QUAY_PASSWORD/" quay-credentials.yaml
 oc -n reversewords-ci create secret generic image-updater-secret --from-literal=token=${GIT_AUTH_TOKEN}
+oc -n reversewords-ci create secret quay-user-pass --from-literal=token=${GIT_AUTH_TOKEN}
 oc -n reversewords-ci create -f quay-credentials.yaml
 oc -n reversewords-ci create -f pipeline-sa.yaml
 oc -n reversewords-ci create -f lint-task.yaml
 oc -n reversewords-ci create -f test-task.yaml
 oc -n reversewords-ci create -f build-task.yaml
 oc -n reversewords-ci create -f image-updater-task.yaml
-sed -i "s|<reversewords_git_repo>|https://github.com/${GIT_USERNAME}/reverse-words|" build-pipeline.yaml
-sed -i "s|<reversewords_quay_repo>|quay.io/mavazque/tekton-reversewords|" build-pipeline.yaml
-sed -i "s|<golang_package>|github.com/${GIT_USERNAME}/reverse-words|" build-pipeline.yaml
-sed -i "s|<imageBuilder_sourcerepo>|${GIT_USERNAME}/reverse-words-cicd|" build-pipeline.yaml
+sed -i "s|<reversewords_git_repo>|https://github.com/${GIT_USERNAME}/reverse-words|" build-pipeline.yaml  || exit $?
+sed -i "s|<reversewords_quay_repo>|quay.io/${QUAY_USER}/tekton-reversewords|" build-pipeline.yaml  || exit $?
+sed -i "s|<golang_package>|github.com/${GIT_USERNAME}/reverse-words|" build-pipeline.yaml  || exit $?
+sed -i "s|<imageBuilder_sourcerepo>|${GIT_USERNAME}/reverse-words-cicd|" build-pipeline.yaml  || exit $?
 oc -n reversewords-ci create -f build-pipeline.yaml
 oc -n reversewords-ci create -f webhook-roles.yaml
 oc -n reversewords-ci create -f github-triggerbinding.yaml
@@ -70,10 +72,10 @@ sed -i "s/- name: pipeline-binding/- name: github-triggerbinding/" webhook.yaml
 oc -n reversewords-ci create -f webhook.yaml
 oc -n reversewords-ci create -f curl-task.yaml
 oc -n reversewords-ci create -f get-stage-release-task.yaml
-sed -i "s|<reversewords_cicd_git_repo>|https://github.com/${GIT_USERNAME}/reverse-words-cicd|" promote-to-prod-pipeline.yaml
-sed -i "s|<reversewords_quay_repo>|quay.io/mavazque/tekton-reversewords|" promote-to-prod-pipeline.yaml
-sed -i "s|<imageBuilder_sourcerepo>|${GIT_USERNAME}/reverse-words-cicd|" promote-to-prod-pipeline.yaml
-sed -i "s|<stage_deployment_file_path>|./deployment.yaml|" promote-to-prod-pipeline.yaml
+sed -i "s|<reversewords_cicd_git_repo>|https://github.com/${GIT_USERNAME}/reverse-words-cicd|" promote-to-prod-pipeline.yaml  || exit $?
+sed -i "s|<reversewords_quay_repo>|quay.io/${QUAY_USER}/tekton-reversewords|" promote-to-prod-pipeline.yaml  || exit $?
+sed -i "s|<imageBuilder_sourcerepo>|${GIT_USERNAME}/reverse-words-cicd|" promote-to-prod-pipeline.yaml  || exit $?
+sed -i "s|<stage_deployment_file_path>|./deployment.yaml|" promote-to-prod-pipeline.yaml  || exit $?
 oc -n reversewords-ci create -f promote-to-prod-pipeline.yaml
 oc -n reversewords-ci create route edge reversewords-webhook --service=el-reversewords-webhook --port=8080 --insecure-policy=Redirect
 sleep 15

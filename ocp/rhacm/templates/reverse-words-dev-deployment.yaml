@@ -1,0 +1,31 @@
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  name: reverse-words-stage
+  labels:
+    app: reverse-words-stage 
+  annotations:
+    apps.open-cluster-management.io/git-path: .
+    apps.open-cluster-management.io/git-branch: stage
+spec:
+  channel: gitops-demo/reverse-words-cicd
+  placement:
+    placementRef:
+      kind: PlacementRule
+      name: development-clusters
+---
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: reverse-words-stage
+spec:
+  componentKinds:
+  - group: apps.open-cluster-management.io
+    kind: Subscription
+  descriptor: {}
+  selector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - reverse-words-stage

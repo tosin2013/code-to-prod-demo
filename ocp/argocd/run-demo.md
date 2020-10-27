@@ -90,7 +90,7 @@ We are going to use WebHooks in order to run Pipelines automatically when new co
     3. Create the following `Hook`
        1. `Payload URL`: Output of command `oc -n reversewords-ci get route reversewords-webhook -o jsonpath='https://{.spec.host}'`
        2. `Content type`: application/json
-       2. `Secret`: v3r1s3cur3
+       2. `Secret`: `v3r1s3cur3`
        3. `Events`: Check **Push Events**, leave others blank
        4. `Active`: Check it
        5. `SSL verification`: Check  **Disable**

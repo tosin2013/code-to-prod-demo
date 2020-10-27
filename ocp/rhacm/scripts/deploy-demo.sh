@@ -1,13 +1,20 @@
 #!/bin/bash
 
+if [[ ${DEBUG-} =~ ^1|yes|true$ ]]; then
+    set -o xtrace
+    set -o errexit
+fi
+
 echo -ne "Enter your quay.io username: "
 read QUAY_USER
 echo -ne "Enter your quay.io password: "
 read -s QUAY_PASSWORD
 echo -ne "\nEnter your Git Token: "
 read -s GIT_AUTH_TOKEN
-
+echo -ne "\nEnter your Git repo username: "
+read GIT_USERNAME
 echo ""
+
 mkdir -p /var/tmp/code-to-prod-demo/
 echo "Deploy Argo CD"
 oc create namespace argocd
@@ -23,7 +30,7 @@ kind: Subscription
 metadata:
   name: openshift-pipelines-operator-rh
 spec:
-  channel: ocp-4.4
+  channel: ocp-4.5
   installPlanApproval: Automatic
   name: openshift-pipelines-operator-rh
   source: redhat-operators
@@ -32,8 +39,8 @@ EOF
 # TODO: wait for subscription instead of sleeping
 sleep 120
 mkdir -p /var/tmp/code-to-prod-demo
-git clone git@github.com:mvazquezc/reverse-words.git /var/tmp/code-to-prod-demo/reverse-words
-git clone git@github.com:mvazquezc/reverse-words-cicd.git /var/tmp/code-to-prod-demo/reverse-words-cicd
+git clone https://github.com/${GIT_USERNAME}/reverse-words.git /var/tmp/code-to-prod-demo/reverse-words || exit $?
+git clone https://github.com/${GIT_USERNAME}/reverse-words-cicd.git /var/tmp/code-to-prod-demo/reverse-words-cicd || exit $?
 cd /var/tmp/code-to-prod-demo/reverse-words-cicd
 git checkout ci
 sleep 10
@@ -48,10 +55,10 @@ oc -n reversewords-ci create -f lint-task.yaml
 oc -n reversewords-ci create -f test-task.yaml
 oc -n reversewords-ci create -f build-task.yaml
 oc -n reversewords-ci create -f image-updater-task.yaml
-sed -i "s|<reversewords_git_repo>|https://github.com/mvazquezc/reverse-words|" build-pipeline.yaml
-sed -i "s|<reversewords_quay_repo>|quay.io/mavazque/tekton-reversewords|" build-pipeline.yaml
-sed -i "s|<golang_package>|github.com/mvazquezc/reverse-words|" build-pipeline.yaml
-sed -i "s|<imageBuilder_sourcerepo>|mvazquezc/reverse-words-cicd|" build-pipeline.yaml
+sed -i "s|<reversewords_git_repo>|https://github.com/${GIT_USERNAME}/reverse-words|" build-pipeline.yaml  || exit $?
+sed -i "s|<reversewords_quay_repo>|quay.io/${QUAY_USER}/tekton-reversewords|" build-pipeline.yaml  || exit $?
+sed -i "s|<golang_package>|github.com/${GIT_USERNAME}/reverse-words|" build-pipeline.yaml  || exit $?
+sed -i "s|<imageBuilder_sourcerepo>|${GIT_USERNAME}/reverse-words-cicd|" build-pipeline.yaml  || exit $?
 oc -n reversewords-ci create -f build-pipeline.yaml
 oc -n reversewords-ci create -f webhook-roles.yaml
 oc -n reversewords-ci create -f github-triggerbinding.yaml
@@ -63,10 +70,10 @@ sed -i "s/- name: pipeline-binding/- name: github-triggerbinding/" webhook.yaml
 oc -n reversewords-ci create -f webhook.yaml
 oc -n reversewords-ci create -f curl-task.yaml
 oc -n reversewords-ci create -f get-stage-release-task.yaml
-sed -i "s|<reversewords_cicd_git_repo>|https://github.com/mvazquezc/reverse-words-cicd|" promote-to-prod-pipeline.yaml
-sed -i "s|<reversewords_quay_repo>|quay.io/mavazque/tekton-reversewords|" promote-to-prod-pipeline.yaml
-sed -i "s|<imageBuilder_sourcerepo>|mvazquezc/reverse-words-cicd|" promote-to-prod-pipeline.yaml
-sed -i "s|<stage_deployment_file_path>|./deployment.yaml|" promote-to-prod-pipeline.yaml
+sed -i "s|<reversewords_cicd_git_repo>|https://github.com/${GIT_USERNAME}/reverse-words-cicd|" promote-to-prod-pipeline.yaml  || exit $?
+sed -i "s|<reversewords_quay_repo>|quay.io/${QUAY_USER}/tekton-reversewords|" promote-to-prod-pipeline.yaml  || exit $?
+sed -i "s|<imageBuilder_sourcerepo>|${GIT_USERNAME}/reverse-words-cicd|" promote-to-prod-pipeline.yaml  || exit $?
+sed -i "s|<stage_deployment_file_path>|./deployment.yaml|" promote-to-prod-pipeline.yaml  || exit $?
 oc -n reversewords-ci create -f promote-to-prod-pipeline.yaml
 oc -n reversewords-ci create route edge reversewords-webhook --service=el-reversewords-webhook --port=8080 --insecure-policy=Redirect
 sleep 15
